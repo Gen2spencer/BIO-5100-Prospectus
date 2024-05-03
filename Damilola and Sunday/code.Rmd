@@ -1,0 +1,323 @@
+---
+title: "Chat-GPT (NDVI)"
+author: "Damilola"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+# Read URLs from the text file
+urls <- readLines("D:/chat-gpt/L3.txt")
+print(urls)
+# Prompt user for NASA Earthdata username and password
+username <- readline("Enter your NASA Earthdata username: ")
+password <- readline("Enter your NASA Earthdata password: ")
+
+# Local directory to save the downloaded images
+output_dir <- ("D:/chat-gpt")
+
+# Function to download file with authentication
+download_with_auth <- function(url, username, password, output_dir) {
+  # Set authentication options
+  auth <- paste(username, password, sep = ":")
+  options <- paste("--user", auth)
+  
+  # Download the file
+  download.file(url, destfile = file.path(output_dir, basename(url)), method = "libcurl", extra = options, mode = "wb")
+}
+
+# Download images using authentication
+for (url in urls) {
+  download_with_auth(url, username, password, output_dir)
+}
+
+
+```
+
+```{r}
+# Example URL (replace with an actual URL from the text file)
+example_url <- "https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected/MOD13A1.061/MOD13A1.A2019353.h10v06.061.2020323155332/MOD13A1.A2019353.h10v06.061.2020323155332.hdf"
+
+# Download the file
+download.file(example_url, destfile = "test.tif", method = "libcurl")
+
+```
+
+```{r}
+# Load necessary libraries
+library(httr)
+
+# Function to download file with authentication
+download_with_auth <- function(url, username, password, output_dir) {
+  # Create authentication token
+  token <- authenticate(username, password)
+
+  # GET request to download the file
+  response <- GET(url, authenticate(username, password))
+
+  # Check if the request was successful
+  if (http_error(response)) {
+    stop("Failed to download the file:", url)
+  }
+
+  # Extract filename from the URL
+  filename <- basename(url)
+
+  # Save the file to the specified directory
+  writeBin(content(response, "raw"), file.path(output_dir, filename))
+
+  # Print success message
+  cat("Downloaded:", filename, "\n")
+}
+
+# Example URL (replace with an actual URL from the text file)
+example_url <- "https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected/MOD13A1.061/MOD13A1.A2019353.h10v06.061.2020323155332/MOD13A1.A2019353.h10v06.061.2020323155332.hdf"
+
+# Your NASA Earthdata username and password
+username <- readline("Enter your NASA Earthdata username: ")
+password <- readline("Enter your NASA Earthdata password: ")
+
+# Local directory to save the downloaded images
+output_dir <- "D:/chat-gpt"
+
+# Download file using authentication
+download_with_auth(example_url, username, password, output_dir)
+
+```
+
+```{r}
+# Load necessary libraries
+library(httr)
+
+# Function to download file with authentication
+download_with_auth <- function(url, username, password, output_dir) {
+  # Create authentication token
+  token <- authenticate(username, password)
+
+  # GET request to download the file
+  response <- GET(url, authenticate(username, password))
+
+  # Check if the request was successful
+  if (http_error(response)) {
+    stop("Failed to download the file:", url)
+  }
+
+  # Extract filename from the URL
+  filename <- basename(url)
+
+  # Save the file to the specified directory
+  writeBin(content(response, "raw"), file.path(output_dir, filename))
+
+  # Print success message
+  cat("Downloaded:", filename, "\n")
+}
+
+# Read URLs from the text file
+urls <- readLines("D:/chat-gpt/L3.txt")
+
+# Your NASA Earthdata username and password
+username <- readline("Enter your NASA Earthdata username: ")
+password <- readline("Enter your NASA Earthdata password: ")
+
+# Local directory to save the downloaded images
+output_dir <- "D:/chat-gpt"
+
+# Loop through each URL and download the files
+for (url in urls) {
+  download_with_auth(url, username, password, output_dir)
+}
+
+```
+```{r}
+
+# Load necessary libraries
+library(hdf5r)
+setwd("D:/chat-gpt/")
+# Function to extract the first band from an HDF5 file
+extract_first_band <- function(hdf5_file) {
+  # Open HDF5 file
+  hdf5_data <- H5Fopen(hdf5_file)
+
+  # Extract first band (assuming it's named "band1")
+  first_band <- h5read(hdf5_data, "MODIS_Grid_16DAY_500m_VI_0_GRID~500m 16 days NDVI")
+
+  # Close HDF5 file
+  H5Fclose(hdf5_data)
+
+  return(first_band)
+}
+
+# Local directory where HDF5 files are stored
+hdf5_dir <- "D:/chat-gpt"
+
+# List of HDF5 files in the directory
+hdf5_files <- list.files(hdf5_dir, pattern = "\\.h5$", full.names = TRUE)
+
+# List to store first bands
+first_bands <- list()
+
+# Loop through each HDF5 file and extract the first band
+for (hdf5_file in hdf5_files) {
+  first_band <- extract_first_band(hdf5_file)
+  first_bands[[hdf5_file]] <- first_band
+}
+
+# Stack the first bands together
+stacked_first_bands <- stack(first_bands)
+
+# Save the stacked first bands to a new HDF5 file
+writeRaster(stacked_first_bands, filename = "stacked_first_bands.tif", format = "GTiff", overwrite = TRUE)
+
+```
+
+```{r}
+# Load necessary libraries
+library(raster)
+
+# Local directory where HDF5 files are stored
+hdf5_dir <- "D:/chat-gpt"
+
+# List of HDF5 files in the directory
+hdf5_files <- list.files(hdf5_dir, pattern = "\\.h5$", full.names = TRUE)
+
+# List to store first bands
+first_bands <- list()
+
+# Loop through each HDF5 file and extract the first band
+for (hdf5_file in hdf5_files) {
+  tryCatch({
+    first_band <- raster(hdf5_file, varname = "band1")
+    first_bands[[hdf5_file]] <- first_band
+  }, error = function(e) {
+    cat("Error processing file:", hdf5_file, "\n")
+    cat("Error message:", conditionMessage(e), "\n")
+  })
+}
+
+# Filter out NULL elements from the list (if any)
+first_bands <- first_bands[sapply(first_bands, function(x) !is.null(x))]
+
+# Check if any elements are present in the list
+if (length(first_bands) == 0) {
+  stop("No valid first bands found.")
+}
+
+# Stack the first bands together
+stacked_first_bands <- stack(first_bands)
+
+# Save the stacked first bands to a new GeoTIFF file
+writeRaster(stacked_first_bands, filename = "stacked_first_bands.tif", format = "GTiff", overwrite = TRUE)overwrite = TRUE)
+
+```
+
+
+
+```{r}
+# Load necessary libraries
+library(raster)
+library(hdf5r)
+# Function to extract the first band from an HDF5 file
+extract_first_band <- function(hdf5_file) {
+  # Open HDF5 file
+  hdf5_data <- hdf5r::h5file(hdf5_file)
+
+  # Extract the first dataset
+  first_dataset <- hdf5r::h5read(hdf5_data, idx = 1)
+
+  # Close HDF5 file
+  hdf5r::h5close(hdf5_data)
+
+  return(first_dataset)
+}
+
+# Local directory where HDF5 files are stored
+hdf5_dir <- "D:/chat-gpt"
+
+# List of HDF5 files in the directory
+hdf5_files <- list.files(hdf5_dir, pattern = "\\.hdf", full.names = TRUE)
+
+
+# List to store first bands
+first_bands <- list()
+
+# Loop through each HDF5 file and extract the first band
+for (hdf5_file in hdf5_files) {
+  tryCatch({
+    first_band <- extract_first_band(hdf5_file)
+    first_bands[[hdf5_file]] <- first_band
+  }, error = function(e) {
+    cat("Error processing file:", hdf5_file, "\n")
+    cat("Error message:", conditionMessage(e), "\n")
+  })
+}
+
+# Filter out NULL elements from the list (if any)
+#first_bands <- Filter(Negate(is.null), first_bands)
+
+if (length(first_bands) == 0) {
+  stop("No valid first bands found.")
+
+}
+
+#Stack the first bands together
+stacked_first_bands <- stack(first_bands)
+
+# Save the stacked first bands to a new GeoTIFF file
+writeRaster(stacked_first_bands, filename = "stacked_first_bands.tif", format = "GTiff", overwrite = TRUE)
+
+```
+
+```{r}
+# Load necessary libraries
+library(raster)
+
+# Function to extract the first band from an HDF5 file
+extract_first_band <- function(hdf5_file) {
+  # Open HDF5 file
+  hdf5_data <- hdf5r::h5file(hdf5_file)
+
+  # Extract the first dataset
+  first_dataset <- hdf5r::h5read(hdf5_data, idx = 1)
+
+  # Close HDF5 file
+  hdf5r::h5close(hdf5_data)
+
+  return(first_dataset)
+}
+
+# Local directory where HDF5 files are stored
+hdf5_dir <- "D:/chat-gpt"
+
+# List of HDF5 files in the directory
+hdf5_files <- list.files(hdf5_dir, pattern = "\\.h5$", full.names = TRUE)
+
+# List to store first bands
+first_bands <- list()
+
+# Loop through each HDF5 file and extract the first band
+for (hdf5_file in hdf5_files) {
+  tryCatch({
+    first_band <- extract_first_band(hdf5_file)
+    first_bands[[hdf5_file]] <- first_band
+  }, error = function(e) {
+    cat("Error processing file:", hdf5_file, "\n")
+    cat("Error message:", conditionMessage(e), "\n")
+  })
+}
+
+# Filter out NULL elements from the list (if any)
+#first_bands <- Filter(Negate(is.null), first_bands)
+
+# Check if any elements are present in the list
+#if (length(first_bands) == 0) {
+  #stop("No valid first bands found.")
+#}
+
+# Stack the first bands together
+stacked_first_bands <- stack(first_bands)
+
+# Save the stacked first bands to a new GeoTIFF file
+writeRaster(stacked_first_bands, filename = "stacked_first_bands.tif", format = "GTiff", overwrite = TRUE)
+
+```
+
